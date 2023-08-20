@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, ChangeEvent } from "react";
 import { signIn } from "next-auth/react";
 import LoadingDots from "@/components/loading-dots";
 import toast from "react-hot-toast";
@@ -10,53 +10,84 @@ import { useRouter } from "next/navigation";
 export default function Form({ type }: { type: "login" | "register" }) {
 	const [loading, setLoading] = useState(false);
 	const router = useRouter();
+	const [formValues, setFormValues] = useState({
+		name: "",
+		email: "",
+		password: "",
+	});
+
+	const onSubmit = async (e: React.FormEvent) => {
+		e.preventDefault();
+
+		setLoading(true);
+		setFormValues({ name: "", email: "", password: "" });
+
+		if (type === "login") {
+			signIn("credentials", {
+				redirect: false,
+				email: formValues.email,
+				password: formValues.password,
+				// @ts-ignore
+			}).then(({ error }) => {
+				if (error) {
+					setLoading(false);
+					toast.error(error);
+				} else {
+					router.refresh();
+					router.push("/protected");
+				}
+			});
+		} else {
+		console.log(formValues);
+
+
+			fetch("/api/register", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(formValues),
+			}).then(async (res) => {
+				setLoading(false);
+				if (res.status === 200) {
+					toast.success("Account created! Redirecting to login...");
+					setTimeout(() => {
+						router.push("/login");
+					}, 2000);
+				} else {
+					const { error } = await res.json();
+					toast.error(error);
+				}
+			});
+		}
+	};
+
+	const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+		const { name, value } = event.target;
+		setFormValues({ ...formValues, [name]: value });
+	};
 
 	return (
 		<form
-			onSubmit={(e) => {
-				e.preventDefault();
-				setLoading(true);
-				if (type === "login") {
-					signIn("credentials", {
-						redirect: false,
-						email: e.currentTarget.email.value,
-						password: e.currentTarget.password.value,
-						// @ts-ignore
-					}).then(({ error }) => {
-						if (error) {
-							setLoading(false);
-							toast.error(error);
-						} else {
-							router.refresh();
-							router.push("/protected");
-						}
-					});
-				} else {
-					fetch("/api/auth/register", {
-						method: "POST",
-						headers: {
-							"Content-Type": "application/json",
-						},
-						body: JSON.stringify({
-							email: e.currentTarget.email.value,
-							password: e.currentTarget.password.value,
-						}),
-					}).then(async (res) => {
-						setLoading(false);
-						if (res.status === 200) {
-							toast.success("Account created! Redirecting to login...");
-							setTimeout(() => {
-								router.push("/login");
-							}, 2000);
-						} else {
-							const { error } = await res.json();
-							toast.error(error);
-						}
-					});
-				}
-			}}
+			onSubmit={onSubmit}
 			className="flex flex-col space-y-4 bg-gray-50 px-4 py-8 sm:px-16"
 		>
+			{type === "register" ? (
+				<div>
+					<label htmlFor="name" className="block text-xs text-gray-600 uppercase">
+						Full Name
+					</label>
+					<input
+						name="name"
+						type="text"
+						placeholder="John Smith"
+						autoComplete="name"
+						required
+						onChange={handleChange}
+						className="mt-1 block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-black focus:outline-none focus:ring-black sm:text-sm"
+					/>
+				</div>
+			) : null}
 			<div>
 				<label htmlFor="email" className="block text-xs text-gray-600 uppercase">
 					Email Address
@@ -65,9 +96,10 @@ export default function Form({ type }: { type: "login" | "register" }) {
 					id="email"
 					name="email"
 					type="email"
-					placeholder="panic@thedis.co"
+					placeholder="johnsmith@email.com"
 					autoComplete="email"
 					required
+					onChange={handleChange}
 					className="mt-1 block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-black focus:outline-none focus:ring-black sm:text-sm"
 				/>
 			</div>
@@ -80,6 +112,8 @@ export default function Form({ type }: { type: "login" | "register" }) {
 					name="password"
 					type="password"
 					required
+					onChange={handleChange}
+					placeholder="********"
 					className="mt-1 block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-black focus:outline-none focus:ring-black sm:text-sm"
 				/>
 			</div>
