@@ -45,6 +45,9 @@ model User {
   updatedAt     DateTime  @updatedAt
   accounts      Account[]
   sessions      Session[]
+  Ticket        Ticket[]
+  Comment       Comment[]
+  Ticket        Ticket[]
 }
 
 model VerificationRequest {
@@ -56,4 +59,60 @@ model VerificationRequest {
   updatedAt  DateTime @updatedAt
 
   @@unique([identifier, token])
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  Ticket      Ticket[]
+}
+
+model Ticket {
+  id          String         @id @default(cuid())
+  title       String
+  description String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  project     Project        @relation(fields: [projectId], references: [id])
+  projectId   String
+  assignee    User?          @relation(name: "Assignee", fields: [assigneeId], references: [id])
+  assigneeId  String?
+  reporter    User           @relation(fields: [reporterId], references: [id])
+  reporterId  String
+  comments    Comment[]
+  status      TicketStatus   @default(OPEN)
+  priority    TicketPriority
+  type        TicketType
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  ticketId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  String
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum TicketType {
+  BUG
+  FEATURE
+  TASK
+  DOCUMENTATION
 }
